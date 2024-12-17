@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Responsive Sound-Controlled Runner</title>
+    <title>Optimized Sound-Controlled Runner</title>
     <style>
         body {
             margin: 0;
@@ -18,16 +18,16 @@
         }
         #gameContainer {
             position: relative;
-            width: 90vw; /* 90% of the viewport width */
-            height: 90vh; /* 90% of the viewport height */
-            border: 5px solid black; /* Black border always visible */
+            width: 90vw;
+            height: 90vh;
+            border: 5px solid black;
             box-sizing: border-box;
             background-color: #e0f7fa;
         }
         canvas {
-            display: block;
             width: 100%;
             height: 100%;
+            display: block;
         }
         #ui {
             position: absolute;
@@ -90,27 +90,20 @@
         const ui = document.getElementById("ui");
 
         const GRAVITY = 0.7;
-        const BASE_JUMP_FORCE = 150;
+        const BASE_JUMP_FORCE = 12;
         const GROUND_HEIGHT = 50;
         const OBSTACLE_WIDTH = 20;
         const OBSTACLE_HEIGHT = 50;
-        const OBSTACLE_SPEED = 2;
-        const JUMP_LIMIT = 0.1; // Limit jump to 20% of screen height
+        const OBSTACLE_SPEED = 4;
+        const JUMP_LIMIT = 0.2; // Limit jump to 20% of screen height
 
         let player, obstacles, score, gameOver, audioContext, analyser, microphone, dataArray;
+        let lastFrameTime = 0;
+        const MAX_FPS = 60;
 
-        // Set canvas size dynamically based on screen resolution
         function setCanvasSize() {
-            const screenWidth = window.innerWidth;
-            const screenHeight = window.innerHeight;
-
-            // Log the resolution
-            console.log(`Screen Resolution: ${screenWidth}x${screenHeight}`);
-            console.log(`Canvas Resolution: ${Math.floor(screenWidth * 0.9)}x${Math.floor(screenHeight * 0.9)}`);
-
-            // Set canvas dimensions
-            canvas.width = Math.floor(screenWidth * 0.9); // 90% of screen width
-            canvas.height = Math.floor(screenHeight * 0.9); // 90% of screen height
+            canvas.width = Math.floor(window.innerWidth * 0.9);
+            canvas.height = Math.floor(window.innerHeight * 0.9);
         }
 
         function resetGame() {
@@ -156,7 +149,6 @@
             player.velocityY += GRAVITY;
             player.y += player.velocityY;
 
-            // Limit the player's jump height
             const jumpLimitY = canvas.height * JUMP_LIMIT;
             if (player.y <= jumpLimitY) {
                 player.y = jumpLimitY;
@@ -177,13 +169,15 @@
                 }
             }
 
-            obstacles.forEach(obstacle => obstacle.x -= OBSTACLE_SPEED);
+            // Update obstacles
+            obstacles.forEach(obstacle => (obstacle.x -= OBSTACLE_SPEED));
             obstacles = obstacles.filter(obstacle => obstacle.x + OBSTACLE_WIDTH > 0);
 
             if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 300) {
                 obstacles.push({ x: canvas.width, y: canvas.height - GROUND_HEIGHT - OBSTACLE_HEIGHT });
             }
 
+            // Collision detection
             obstacles.forEach(obstacle => {
                 if (
                     player.x < obstacle.x + OBSTACLE_WIDTH &&
@@ -214,14 +208,18 @@
             });
         }
 
-        function gameLoop() {
-            updateGame();
-            renderGame();
+        function gameLoop(timestamp) {
+            if (!lastFrameTime || timestamp - lastFrameTime >= 1000 / MAX_FPS) {
+                updateGame();
+                renderGame();
+                lastFrameTime = timestamp;
+            }
+
             if (!gameOver) requestAnimationFrame(gameLoop);
         }
 
         function startGameLoop() {
-            gameLoop();
+            requestAnimationFrame(gameLoop);
         }
 
         function showGameOver() {
