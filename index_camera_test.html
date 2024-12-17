@@ -89,7 +89,7 @@
 <body>
     <div id="gameContainer">
         <!-- Video for camera feed -->
-        <video id="cameraFeed" autoplay playsinline></video>
+        <video id="cameraFeed" autoplay playsinline muted></video>
         <!-- Canvas for the game -->
         <canvas id="gameCanvas"></canvas>
         <!-- UI Layer -->
@@ -141,12 +141,12 @@
             startGameLoop();
         }
 
-        // Request Camera Access
+        // Request Camera Access (Video only, no audio)
         async function requestCameraAccess() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "user" },
-                    audio: true
+                    video: { facingMode: "user" }, // Front camera
+                    audio: false // No audio from the camera
                 });
                 cameraFeed.srcObject = stream;
                 cameraFeed.style.display = "block"; // Show camera background
@@ -155,6 +155,7 @@
             }
         }
 
+        // Request Microphone Access (For game input)
         async function requestMicAccess() {
             if (!audioContext) {
                 try {
