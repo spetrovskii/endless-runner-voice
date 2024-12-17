@@ -90,12 +90,12 @@
         const ui = document.getElementById("ui");
 
         const GRAVITY = 0.7;
-        const BASE_JUMP_FORCE = 12;
+        const BASE_JUMP_FORCE = 150;
         const GROUND_HEIGHT = 50;
         const OBSTACLE_WIDTH = 20;
         const OBSTACLE_HEIGHT = 50;
-        const OBSTACLE_SPEED = 4;
-        const JUMP_LIMIT = 0.2; // Limit jump to 20% of screen height
+        const OBSTACLE_SPEED = 2;
+        const JUMP_LIMIT = 0.1; // Limit jump to 20% of screen height
 
         let player, obstacles, score, gameOver, audioContext, analyser, microphone, dataArray;
         let lastFrameTime = 0;
