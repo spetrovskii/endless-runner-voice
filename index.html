@@ -22,7 +22,7 @@
             height: 90vmin;
             max-width: 100%;
             max-height: 100%;
-            border: 5px solid black; /* Black border always visible */
+            border: 5px solid black;
             box-sizing: border-box;
             display: flex;
             justify-content: center;
@@ -104,6 +104,7 @@
         const OBSTACLE_WIDTH = 20;
         const OBSTACLE_HEIGHT = 50;
         const OBSTACLE_SPEED = 2;
+        const JUMP_LIMIT = 0.2; // Player can only jump up to 20% from the top
 
         let player, obstacles, score, gameOver, audioContext, analyser, microphone, dataArray;
 
@@ -154,6 +155,13 @@
 
             player.velocityY += GRAVITY;
             player.y += player.velocityY;
+
+            // Limit the player jump to 80% of screen height
+            const jumpLimitY = canvas.height * JUMP_LIMIT;
+            if (player.y <= jumpLimitY) {
+                player.y = jumpLimitY;
+                player.velocityY = 0;
+            }
 
             if (player.y >= canvas.height - GROUND_HEIGHT - player.height) {
                 player.y = canvas.height - GROUND_HEIGHT - player.height;
