@@ -31,8 +31,8 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            z-index: 0; /* Behind all elements */
-            display: none; /* Hidden by default */
+            z-index: 0;
+            display: none;
         }
         canvas {
             position: absolute;
@@ -40,7 +40,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 1; /* Above video */
+            z-index: 1;
         }
         #ui {
             position: absolute;
@@ -55,15 +55,9 @@
             text-align: center;
             background: rgba(0, 0, 0, 0.5);
             color: white;
-            z-index: 2; /* Always on top */
+            z-index: 2;
         }
-        #gameOverText {
-            font-size: 6vmin;
-            font-weight: bold;
-            text-shadow: 2px 2px 5px black;
-            margin-bottom: 2vmin;
-        }
-        #startButton, #restartButton {
+        #startButton {
             padding: 10px 20px;
             font-size: 4vmin;
             background-color: #4CAF50;
@@ -71,35 +65,18 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            z-index: 3; /* Buttons are clickable */
-        }
-        #startButton:hover, #restartButton:hover {
-            background-color: #45a049;
-        }
-        #scoreDisplay {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            font-size: 4vmin;
-            color: #333;
-            z-index: 2;
+            z-index: 3;
         }
     </style>
 </head>
 <body>
     <div id="gameContainer">
-        <!-- Video for camera feed -->
         <video id="cameraFeed" autoplay playsinline muted></video>
-        <!-- Canvas for the game -->
         <canvas id="gameCanvas"></canvas>
-        <!-- UI Layer -->
         <div id="ui">
             <div id="instructions">Click "Start Game" to allow microphone and camera access to play!</div>
-            <div id="gameOverText" style="display: none;">Game Over!</div>
             <button id="startButton">Start Game</button>
-            <button id="restartButton" style="display: none;">Restart Game</button>
         </div>
-        <div id="scoreDisplay" style="display: none;">Score: 0</div>
     </div>
 
     <script>
@@ -107,18 +84,13 @@
         const ctx = canvas.getContext("2d");
         const cameraFeed = document.getElementById("cameraFeed");
         const startButton = document.getElementById("startButton");
-        const restartButton = document.getElementById("restartButton");
         const instructions = document.getElementById("instructions");
-        const gameOverText = document.getElementById("gameOverText");
-        const scoreDisplay = document.getElementById("scoreDisplay");
-        const ui = document.getElementById("ui");
-
         const GRAVITY = 0.7;
-        const BASE_JUMP_FORCE = 150;
+        const BASE_JUMP_FORCE = 12;
         const GROUND_HEIGHT = 50;
         const OBSTACLE_WIDTH = 20;
         const OBSTACLE_HEIGHT = 50;
-        const OBSTACLE_SPEED = 2;
+        const OBSTACLE_SPEED = 4;
 
         let player, obstacles, score, gameOver, audioContext, analyser, microphone, dataArray;
 
@@ -127,85 +99,80 @@
             canvas.height = Math.floor(window.innerHeight * 0.9);
         }
 
+        // Game reset function
         function resetGame() {
             setCanvasSize();
             player = { x: 50, y: canvas.height - GROUND_HEIGHT - 50, width: 30, height: 50, velocityY: 0 };
             obstacles = [];
             score = 0;
             gameOver = false;
-
-            restartButton.style.display = "none";
-            gameOverText.style.display = "none";
-            ui.style.display = "none";
-            scoreDisplay.style.display = "block";
             startGameLoop();
         }
 
-        // Request Camera Access (Video only, no audio)
+        // Request Camera Access
         async function requestCameraAccess() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "user" }, // Front camera
-                    audio: false // No audio from the camera
+                    video: { facingMode: "user" }, audio: false
                 });
                 cameraFeed.srcObject = stream;
-                cameraFeed.style.display = "block"; // Show camera background
+                cameraFeed.style.display = "block";
             } catch (error) {
-                console.warn("Camera access denied or unavailable. Continuing without it.");
+                console.warn("Camera access failed. Continuing without camera.");
             }
         }
 
-        // Request Microphone Access (For game input)
+        // Request Microphone Access
         async function requestMicAccess() {
-            if (!audioContext) {
-                try {
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-                    analyser = audioContext.createAnalyser();
-                    analyser.fftSize = 256;
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
 
-                    microphone = audioContext.createMediaStreamSource(stream);
-                    microphone.connect(analyser);
+                microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(analyser);
 
-                    dataArray = new Uint8Array(analyser.frequencyBinCount);
-                } catch (error) {
-                    instructions.innerText = "Microphone access is required to play!";
-                    ui.style.display = "flex";
-                    return;
-                }
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+            } catch (error) {
+                instructions.innerText = "Microphone access is required to play!";
+                console.error("Microphone access failed:", error);
             }
-            instructions.style.display = "none";
-            resetGame();
         }
 
         function updateGame() {
             if (gameOver) return;
 
+            // Apply gravity
             player.velocityY += GRAVITY;
             player.y += player.velocityY;
 
-            if (player.y >= canvas.height - GROUND_HEIGHT - player.height) {
+            // Limit to ground
+            if (player.y > canvas.height - GROUND_HEIGHT - player.height) {
                 player.y = canvas.height - GROUND_HEIGHT - player.height;
                 player.velocityY = 0;
             }
 
+            // Microphone jump logic
             if (dataArray) {
                 analyser.getByteFrequencyData(dataArray);
                 const volume = dataArray.reduce((sum, val) => sum + val, 0) / dataArray.length / 255;
-
-                if (volume > 0.1 && player.y >= canvas.height - GROUND_HEIGHT - player.height) {
+                if (volume > 0.1) {
                     player.velocityY = -BASE_JUMP_FORCE * volume;
                 }
             }
 
+            // Update and remove obstacles
             obstacles.forEach(obstacle => (obstacle.x -= OBSTACLE_SPEED));
             obstacles = obstacles.filter(obstacle => obstacle.x + OBSTACLE_WIDTH > 0);
 
+            // Add new obstacles
             if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 300) {
                 obstacles.push({ x: canvas.width, y: canvas.height - GROUND_HEIGHT - OBSTACLE_HEIGHT });
             }
 
+            // Collision detection
             obstacles.forEach(obstacle => {
                 if (
                     player.x < obstacle.x + OBSTACLE_WIDTH &&
@@ -213,17 +180,13 @@
                     player.y + player.height > obstacle.y
                 ) {
                     gameOver = true;
-                    showGameOver();
+                    console.log("Game Over!");
                 }
             });
-
-            score++;
-            scoreDisplay.innerText = "Score: " + Math.floor(score / 10);
         }
 
         function renderGame() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
             ctx.fillStyle = "brown";
             ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
 
@@ -243,24 +206,19 @@
         }
 
         function startGameLoop() {
+            resetGame();
             requestAnimationFrame(gameLoop);
-        }
-
-        function showGameOver() {
-            restartButton.style.display = "block";
-            gameOverText.style.display = "block";
-            ui.style.display = "flex";
         }
 
         startButton.addEventListener("click", async () => {
             await requestCameraAccess();
             await requestMicAccess();
             startButton.style.display = "none";
+            instructions.style.display = "none";
+            resetGame();
         });
 
-        restartButton.addEventListener("click", resetGame);
         window.addEventListener("resize", setCanvasSize);
-
         setCanvasSize();
     </script>
 </body>
